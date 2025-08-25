@@ -182,6 +182,20 @@ struct Vector : TensorBaseCRTP<Vector<ssize, T, Backend>> {
     Backend::assign(*this, other);
     return *this;
   }
+
+  inline DataType dot(const Vector &other) const {
+    return Backend::dot(*this, other);
+  }
+
+  inline DataType sdot(const Vector &other) const {
+    return Backend::sdot(*this, other);
+  }
+
+  inline DataType norm2() const { return Backend::norm2(*this); }
+  inline DataType norm1() const { return Backend::norm2(*this); }
+  inline DataType norminf() const { return Backend::norm2(*this); }
+
+  inline size_t indexmax() const { return Backend::indexmax(*this); }
 };
 
 //

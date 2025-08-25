@@ -1,13 +1,8 @@
 #pragma once
 
-#include <cmath>
-#include <cstddef>
-#include <type_traits>
-
 #include "TensorBase.hpp"
-#include "cblas.h"
 
-struct CblasBackend {
+struct SingleBackend {
   //
   // ADD
   //
@@ -25,13 +20,7 @@ struct CblasBackend {
       assert(lhs.shape() == rhs.vec.shape());
     };
 
-    if constexpr (std::is_same_v<typename TensorType::DataType, double>)
-      cblas_daxpy(lhs.size(), rhs.sca, rhs.vec.data(), 1, lhs.data(), 1);
-    else if constexpr (std::is_same_v<typename TensorType::DataType, float>)
-      cblas_saxpy(lhs.size(), rhs.sca, rhs.vec.data(), 1, lhs.data(), 1);
-    else {
-      for (size_t i = 0; i < lhs.size(); i++) lhs[i] += rhs.sca * rhs.vec[i];
-    }
+    for (size_t i = 0; i < lhs.size(); i++) lhs[i] += rhs.sca * rhs.vec[i];
   }
 
   template <typename TensorType>
@@ -58,13 +47,7 @@ struct CblasBackend {
       assert(lhs.shape() == rhs.vec.shape());
     };
 
-    if constexpr (std::is_same_v<typename TensorType::DataType, double>)
-      cblas_daxpy(lhs.size(), -rhs.sca, rhs.vec.data(), 1, lhs.data(), 1);
-    else if constexpr (std::is_same_v<typename TensorType::DataType, float>)
-      cblas_saxpy(lhs.size(), -rhs.sca, rhs.vec.data(), 1, lhs.data(), 1);
-    else {
-      for (size_t i = 0; i < lhs.size(); i++) lhs[i] -= rhs.sca * rhs.vec[i];
-    }
+    for (size_t i = 0; i < lhs.size(); i++) lhs[i] -= rhs.sca * rhs.vec[i];
   }
 
   template <typename TensorType>
@@ -80,13 +63,7 @@ struct CblasBackend {
   template <typename TensorType>
   inline static void multiply(TensorBaseCRTP<TensorType>& lhs,
                               const TensorType::DataType& rhs) {
-    if constexpr (std::is_same_v<typename TensorType::DataType, double>) {
-      cblas_dscal(lhs.size(), rhs, lhs.data(), 1);
-    } else if constexpr (std::is_same_v<typename TensorType::DataType, float>) {
-      cblas_sscal(lhs.size(), rhs, lhs.data(), 1);
-    } else {
-      for (size_t i = 0; i < lhs.size(); i++) lhs[i] *= rhs;
-    }
+    for (size_t i = 0; i < lhs.size(); i++) lhs[i] *= rhs;
   }
 
   template <typename TensorType>
@@ -97,15 +74,7 @@ struct CblasBackend {
       assert(lhs.shape() == rhs.vec.shape());
     };
 
-    if constexpr (std::is_same_v<typename TensorType::DataType, double>) {
-      cblas_dscal(lhs.size(), rhs.sca, lhs.data(), 1);
-      for (size_t i = 0; i < lhs.size(); i++) lhs[i] *= rhs.vec[i];
-    } else if constexpr (std::is_same_v<typename TensorType::DataType, float>) {
-      cblas_sscal(lhs.size(), rhs.sca, lhs.data(), 1);
-      for (size_t i = 0; i < lhs.size(); i++) lhs[i] *= rhs.vec[i];
-    } else {
-      for (size_t i = 0; i < lhs.size(); i++) lhs[i] *= rhs.sca * rhs.vec[i];
-    }
+    for (size_t i = 0; i < lhs.size(); i++) lhs[i] *= rhs.sca * rhs.vec[i];
   }
 
   template <typename TensorType>
@@ -122,13 +91,7 @@ struct CblasBackend {
   template <typename TensorType>
   inline static void divide(TensorBaseCRTP<TensorType>& lhs,
                             const TensorType::DataType& rhs) {
-    if constexpr (std::is_same_v<typename TensorType::DataType, double>) {
-      cblas_dscal(lhs.size(), TensorType::DataType(1.0) / rhs, lhs.data(), 1);
-    } else if constexpr (std::is_same_v<typename TensorType::DataType, float>) {
-      cblas_sscal(lhs.size(), TensorType::DataType(1.0) / rhs, lhs.data(), 1);
-    } else {
-      for (size_t i = 0; i < lhs.size(); i++) lhs[i] *= rhs;
-    }
+    for (size_t i = 0; i < lhs.size(); i++) lhs[i] /= rhs;
   }
 
   template <typename TensorType>
@@ -139,15 +102,7 @@ struct CblasBackend {
       assert(lhs.shape() == rhs.vec.shape());
     };
 
-    if constexpr (std::is_same_v<typename TensorType::DataType, double>) {
-      cblas_dscal(lhs.size(), rhs.sca, lhs.data(), 1);
-      for (size_t i = 0; i < lhs.size(); i++) lhs[i] /= rhs.vec[i];
-    } else if constexpr (std::is_same_v<typename TensorType::DataType, float>) {
-      cblas_sscal(lhs.size(), rhs.sca, lhs.data(), 1);
-      for (size_t i = 0; i < lhs.size(); i++) lhs[i] /= rhs.vec[i];
-    } else {
-      for (size_t i = 0; i < lhs.size(); i++) lhs[i] /= rhs.sca * rhs.vec[i];
-    }
+    for (size_t i = 0; i < lhs.size(); i++) lhs[i] /= rhs.sca * rhs.vec[i];
   }
 
   template <typename TensorType>
@@ -159,13 +114,7 @@ struct CblasBackend {
 
   template <size_t _size, typename T>
   inline static void divide(Vector<_size, T, CblasBackend>& lhs, const T& rhs) {
-    if constexpr (std::is_same_v<T, double>) {
-      cblas_dscal(lhs.size(), 1.0 / rhs, lhs.data(), 1);
-    } else if constexpr (std::is_same_v<T, float>) {
-      cblas_sscal(lhs.size(), 1.0f / rhs, lhs.data(), 1);
-    } else {
-      for (size_t i = 0; i < lhs.size(); i++) lhs[i] *= T(1.0) / rhs;
-    }
+    for (size_t i = 0; i < lhs.size(); i++) lhs[i] *= T(1.0) / rhs;
   }
 
   //
@@ -185,15 +134,7 @@ struct CblasBackend {
       assert(lhs.shape() == rhs.shape());
     };
 
-    if constexpr (std::is_same_v<typename TensorType::DataType, double>) {
-      cblas_dcopy(lhs.size(), rhs.vec.data(), 1, lhs.data(), 1);
-      cblas_dscal(lhs.size(), rhs.sca, lhs.data(), 1);
-    } else if constexpr (std::is_same_v<typename TensorType::DataType, float>) {
-      cblas_scopy(lhs.size(), rhs.vec.data(), 1, lhs.data(), 1);
-      cblas_sscal(lhs.size(), rhs.sca, lhs.data(), 1);
-    } else {
-      for (size_t i = 0; i < lhs.size(); i++) lhs[i] = rhs.sca * rhs.vec[i];
-    }
+    for (size_t i = 0; i < lhs.size(); i++) lhs[i] = rhs.sca * rhs.vec[i];
   }
 
   template <typename TensorType>
@@ -215,14 +156,8 @@ struct CblasBackend {
       assert(lhs.shape() == rhs.shape());
     };
 
-    if constexpr (std::is_same_v<typename TensorType::DataType, double>) {
-      return cblas_ddot(lhs.size(), lhs.data(), 1, rhs.data(), 1);
-    } else if constexpr (std::is_same_v<typename TensorType::DataType, float>) {
-      return cblas_sdot(lhs.size(), lhs.data(), 1, rhs.data(), 1);
-    } else {
-      typename TensorType::DataType acc = 0.0;
-      for (size_t i = 0; i < lhs.size(); i++) acc += lhs[i] * rhs[i];
-    }
+    typename TensorType::DataType acc = 0.0;
+    for (size_t i = 0; i < lhs.size(); i++) acc += lhs[i] * rhs[i];
   }
 
   template <typename TensorType>
@@ -234,14 +169,8 @@ struct CblasBackend {
       assert(lhs.shape() == rhs.shape());
     };
 
-    if constexpr (std::is_same_v<typename TensorType::DataType, double>) {
-      return cblas_dsdot(lhs.size(), lhs.data(), 1, rhs.data(), 1);
-    } else if constexpr (std::is_same_v<typename TensorType::DataType, float>) {
-      return cblas_sdsdot(lhs.size(), lhs.data(), 1, rhs.data(), 1);
-    } else {
-      typename TensorType::DataType acc = 0.0;
-      for (size_t i = 0; i < lhs.size(); i++) acc += lhs[i] * rhs[i];
-    }
+    typename TensorType::DataType acc = 0.0;
+    for (size_t i = 0; i < lhs.size(); i++) acc += lhs[i] * rhs[i];
   }
 
   //
@@ -250,29 +179,17 @@ struct CblasBackend {
   template <typename TensorType>
   inline static typename TensorType::DataType norm2(
       const TensorBaseCRTP<TensorType>& lhs) {
-    if constexpr (std::is_same_v<typename TensorType::DataType, double>) {
-      return cblas_dnrm2(lhs.size(), lhs.data(), 1);
-    } else if constexpr (std::is_same_v<typename TensorType::DataType, float>) {
-      return cblas_snrm2(lhs.size(), lhs.data(), 1);
-    } else {
-      typename TensorType::DataType acc = 0.0;
-      for (size_t i = 0; i < lhs.size(); i++) acc += lhs[i] * lhs[i];
-      return sqrt(acc);
-    }
+    typename TensorType::DataType acc = 0.0;
+    for (size_t i = 0; i < lhs.size(); i++) acc += lhs[i] * lhs[i];
+    return sqrt(acc);
   }
 
   template <typename TensorType>
   inline static typename TensorType::DataType norm1(
       const TensorBaseCRTP<TensorType>& lhs) {
-    if constexpr (std::is_same_v<typename TensorType::DataType, double>) {
-      return cblas_dasum(lhs.size(), lhs.data(), 1);
-    } else if constexpr (std::is_same_v<typename TensorType::DataType, float>) {
-      return cblas_sasum(lhs.size(), lhs.data(), 1);
-    } else {
-      typename TensorType::DataType acc = 0.0;
-      for (size_t i = 0; i < lhs.size(); i++) acc += std::abs(lhs[i]);
-      return acc;
-    }
+    typename TensorType::DataType acc = 0.0;
+    for (size_t i = 0; i < lhs.size(); i++) acc += std::abs(lhs[i]);
+    return acc;
   }
 
   template <typename TensorType>
@@ -286,21 +203,15 @@ struct CblasBackend {
   //
   template <typename TensorType>
   inline static size_t indexmax(const TensorBaseCRTP<TensorType>& lhs) {
-    if constexpr (std::is_same_v<typename TensorType::DataType, double>) {
-      return cblas_idamax(lhs.size(), lhs.data(), 1);
-    } else if constexpr (std::is_same_v<typename TensorType::DataType, float>) {
-      return cblas_isamax(lhs.size(), lhs.data(), 1);
-    } else {
-      size_t maxIndex = 0;
-      typename TensorType::DataType maxElem = 0;
-      for (size_t i = 0; i < lhs.size(); i++) {
-        typename TensorType::DataType elem = lhs[i];
-        if (std::abs(elem) > maxElem) {
-          maxIndex = i;
-          maxElem = elem;
-        }
+    size_t maxIndex = 0;
+    typename TensorType::DataType maxElem = 0;
+    for (size_t i = 0; i < lhs.size(); i++) {
+      typename TensorType::DataType elem = lhs[i];
+      if (std::abs(elem) > maxElem) {
+        maxIndex = i;
+        maxElem = elem;
       }
-      return maxIndex;
     }
+    return maxIndex;
   }
 };
