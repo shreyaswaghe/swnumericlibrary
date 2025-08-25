@@ -23,7 +23,6 @@ template <size_t ssize, typename T, typename Backend>
 struct Vector : TensorBaseCRTP<Vector<ssize, T, Backend>> {
  public:
   using DataType = TensorTraits<Vector>::DataType;
-  static constexpr size_t _csize = ssize;
   union {
     DataType *heapData;
     DataType staticData[ssize > 0 ? ssize : 1];

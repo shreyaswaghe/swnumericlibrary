@@ -10,12 +10,17 @@ struct CblasBackend;
 struct SingleBackend;
 struct CUDABackend;
 
+#define DEFAULT_BACKEND CblasBackend
+#define DEFAULT_DATATYPE double
+#define DEFAULT_SIZE 0
+
 // Basic Type Definitions
-template <size_t ssize, typename T = double, typename Backend = CblasBackend>
+template <size_t ssize = DEFAULT_SIZE, typename T = DEFAULT_DATATYPE,
+          typename Backend = DEFAULT_BACKEND>
 struct Vector;
 
-template <size_t rows, size_t cols, typename T = double,
-          typename Backend = CblasBackend>
+template <size_t rows, size_t cols, typename T = DEFAULT_DATATYPE,
+          typename Backend = DEFAULT_BACKEND>
 struct Matrix;
 
 // Each TensorType must specialize this to provide:
