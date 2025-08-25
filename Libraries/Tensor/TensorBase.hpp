@@ -23,12 +23,15 @@ template <size_t rows, size_t cols, typename T = DEFAULT_DATATYPE,
           typename Backend = DEFAULT_BACKEND>
 struct Matrix;
 
-// Each TensorType must specialize this to provide:
+// Each TensorType must specialize this to provide information about the type
+// which should be known/infered at compile time:
 // 1. TensorTraits::DataType representing the data type of an ordinary element
 // of TensorType
 // 2. TensorTraits::BackendType representing the Backend interface
 // 3. TensorTraits::_nDims representing the number of dimensions of the
 // TensorType
+// 4. TensorTraits::_csize representing the number of elements that may be
+// deduced at compile time
 template <typename TensorType>
 struct TensorTraits;
 
