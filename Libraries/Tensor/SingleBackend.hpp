@@ -2,6 +2,8 @@
 
 #include "TensorBase.hpp"
 
+namespace swnumeric {
+
 struct SingleBackend {
   //
   // ADD
@@ -215,3 +217,5 @@ struct SingleBackend {
     return maxIndex;
   }
 };
+
+}  // namespace swnumeric

@@ -7,6 +7,8 @@
 #include "TensorBase.hpp"
 #include "cblas.h"
 
+namespace swnumeric {
+
 struct CblasBackend {
   //
   // ADD
@@ -118,14 +120,15 @@ struct CblasBackend {
   //
   // DIVIDE
   //
-  //
   template <typename TensorType>
   inline static void divide(TensorBaseCRTP<TensorType>& lhs,
                             const TensorType::DataType& rhs) {
     if constexpr (std::is_same_v<typename TensorType::DataType, double>) {
-      cblas_dscal(lhs.size(), TensorType::DataType(1.0) / rhs, lhs.data(), 1);
+      cblas_dscal(lhs.size(), typename TensorType::DataType(1.0) / rhs,
+                  lhs.data(), 1);
     } else if constexpr (std::is_same_v<typename TensorType::DataType, float>) {
-      cblas_sscal(lhs.size(), TensorType::DataType(1.0) / rhs, lhs.data(), 1);
+      cblas_sscal(lhs.size(), typename TensorType::DataType(1.0) / rhs,
+                  lhs.data(), 1);
     } else {
       for (size_t i = 0; i < lhs.size(); i++) lhs[i] *= rhs;
     }
@@ -304,3 +307,5 @@ struct CblasBackend {
     }
   }
 };
+
+}  // namespace swnumeric

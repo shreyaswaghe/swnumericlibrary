@@ -1,5 +1,318 @@
 #pragma once
 
+#include <algorithm>
 #include <cstddef>
 
-#include "Vector.hpp"
+#include "CblasBackend.hpp"
+#include "TensorBase.hpp"
+
+namespace swnumeric {
+
+//
+// Matrix specialization of TensorType, compatible with TensorBaseCRTP
+//
+template <size_t nrows, size_t ncols, typename T, typename Backend>
+struct TensorTraits<Matrix<nrows, ncols, T, Backend>> {
+  using DataType = T;
+  using BackendType = Backend;
+  static constexpr size_t _nDims = 2;
+  static constexpr size_t _csize = nrows * ncols;
+  static constexpr size_t _nrows = nrows;
+  static constexpr size_t _ncols = ncols;
+};
+
+template <size_t nrows, size_t ncols, typename T, typename Backend>
+struct Matrix : TensorBaseCRTP<Matrix<nrows, ncols, T, Backend>> {
+ public:
+  using DataType = TensorTraits<Matrix>::DataType;
+  union {
+    DataType *heapData;
+    DataType staticData[nrows * ncols > 0 ? nrows *ncols : 1];
+  } dataHolder;
+  size_t _rows, _cols;
+
+  // Construction with memory allocation
+  Matrix(size_t nr = nrows, size_t nc = ncols) {
+    if constexpr (nrows * ncols == 0) {
+      assert(nr * nc != 0);
+      void *mem = std::malloc(nr * nc * sizeof(DataType));
+      assert(mem != nullptr);
+      dataHolder.heapData = static_cast<DataType *>(mem);
+      _rows = nr;
+      _cols = nc;
+    } else {
+      _rows = nrows;
+      _cols = ncols;
+    }
+  }
+
+  Matrix(const std::array<size_t, 2> &shape) {
+    size_t nr = shape[0];
+    size_t nc = shape[1];
+    if constexpr (nrows * ncols == 0) {
+      assert(nr * nc != 0);
+      void *mem = std::malloc(nr * nc * sizeof(DataType));
+      assert(mem != nullptr);
+      dataHolder.heapData = static_cast<DataType *>(mem);
+      _rows = nr;
+      _cols = nc;
+    } else {
+      _rows = nrows;
+      _cols = ncols;
+    }
+  }
+
+  // Construction from array-like objects
+  // Disable construction from initializer list since its size cannot be
+  // obtained at compile time in C++20
+  Matrix(const std::array<std::array<DataType, ncols>, nrows> &vals)
+      : Matrix(nrows, ncols) {}
+
+  // Copy construction
+  Matrix(const Matrix &other) {
+    _rows = other._rows;
+    _cols = other._cols;
+    if constexpr (nrows * ncols == 0) {
+      if (_rows * _cols > 0) {
+        dataHolder.heapData = static_cast<DataType *>(
+            std::malloc(_rows * _cols * sizeof(DataType)));
+        std::copy(other.data(), other.data() + _rows * _cols,
+                  dataHolder.heapData);
+      }
+    } else {
+      std::copy(other.data(), other.data() + _rows * _cols,
+                dataHolder.staticData);
+    }
+  }
+
+  // Copy assignment
+  Matrix &operator=(const Matrix &other) {
+    if (this == &other) return *this;
+    if constexpr (nrows * ncols == 0) {
+      assert(_rows == other._rows && _cols == other._cols);
+      if (dataHolder.heapData) std::free(dataHolder.heapData);
+      _rows = other._rows;
+      _cols = other._cols;
+      if (_rows * _cols > 0) {
+        dataHolder.heapData = static_cast<DataType *>(
+            std::malloc(_rows * _cols * sizeof(DataType)));
+        std::copy(other.data(), other.data() + _rows * _cols,
+                  dataHolder.heapData);
+      }
+    } else {
+      _rows = other._rows;
+      _cols = other._cols;
+      std::copy(other.data(), other.data() + _rows * _cols,
+                dataHolder.staticData);
+    }
+    return *this;
+  }
+
+  // Move constructor
+  Matrix(Matrix &&other) noexcept {
+    _rows = other._rows;
+    _cols = other._cols;
+    if constexpr (nrows * ncols == 0) {
+      dataHolder.heapData = other.dataHolder.heapData;
+      other.dataHolder.heapData = nullptr;
+      other._rows = 0;
+      other._cols = 0;
+    } else {
+      std::copy(other.data(), other.data() + _rows * _cols,
+                dataHolder.staticData);
+    }
+  }
+
+  // Move assignment
+  Matrix &operator=(Matrix &&other) noexcept {
+    if (this == &other) return *this;
+    if constexpr (nrows * ncols == 0) {
+      if (dataHolder.heapData) std::free(dataHolder.heapData);
+      dataHolder.heapData = other.dataHolder.heapData;
+      _rows = other._rows;
+      _cols = other._cols;
+      other.dataHolder.heapData = nullptr;
+      other._size = 0;
+    } else {
+      _rows = other._rows;
+      _cols = other._cols;
+      std::copy(other.data(), other.data() + _rows * _cols,
+                dataHolder.staticData);
+    }
+    return *this;
+  }
+
+  // Destructor
+  ~Matrix() {
+    if (nrows * ncols == 0) {
+      std::free(dataHolder.heapData);
+      dataHolder.heapData = nullptr;
+    }
+  }
+
+  //
+  // Simple Accessors
+  //
+
+  inline DataType *data() {
+    if constexpr (nrows * ncols == 0)
+      return dataHolder.heapData;
+    else
+      return dataHolder.staticData;
+  }
+
+  inline const DataType *data() const {
+    if constexpr (nrows * ncols == 0)
+      return dataHolder.heapData;
+    else
+      return dataHolder.staticData;
+  }
+
+  inline const DataType &operator[](size_t i) const { return data()[i]; }
+  inline DataType &operator[](size_t i) { return data()[i]; }
+
+  inline const DataType *operator()(size_t i) const { return data() + i; }
+  inline DataType *operator()(size_t i) { return data() + i; }
+
+  //
+  // Shape Information Getters
+  //
+
+  inline const size_t size() const { return _rows * _cols; }
+  inline const std::array<size_t, 2> shape() const { return {_rows, _cols}; }
+  inline const size_t nDims() const { return TensorTraits<Matrix>::_nDims; }
+  inline const size_t lda() const { return _rows; }
+  inline const size_t rows() const { return _rows; }
+  inline const size_t cols() const { return _cols; }
+
+  //
+  // Backend handles specialization of operators
+  //
+
+  template <typename Expr>
+  inline Matrix &operator+=(const Expr &other) {
+    Backend::add(*this, other);
+    return *this;
+  }
+
+  template <typename Expr>
+  inline Matrix &operator-=(const Expr &other) {
+    Backend::subtract(*this, other);
+    return *this;
+  }
+
+  template <typename Expr>
+  inline Matrix &operator*=(const Expr &other) {
+    Backend::multiply(*this, other);
+    return *this;
+  }
+
+  template <typename Expr>
+  inline Matrix &operator/=(const Expr &other) {
+    Backend::divide(*this, other);
+    return *this;
+  }
+
+  template <typename Expr>
+  inline Matrix &operator=(const Expr &other) {
+    Backend::assign(*this, other);
+    return *this;
+  }
+
+  inline DataType dot(const Matrix &other) const {
+    return Backend::dot(*this, other);
+  }
+
+  inline DataType sdot(const Matrix &other) const {
+    return Backend::sdot(*this, other);
+  }
+
+  inline DataType normfro() const { return Backend::norm2(*this); }
+  inline DataType norm1() const { return Backend::norm2(*this); }
+  inline DataType norminf() const { return Backend::norm2(*this); }
+
+  inline size_t indexmax() const { return Backend::indexmax(*this); }
+};
+
+//
+// For Matrix, it can be convenient to not do just in-place operations
+//
+
+template <size_t nrows, size_t ncols, typename T, typename Backend>
+inline Matrix<nrows, ncols, T, Backend> operator+(
+    const Matrix<nrows, ncols, T, Backend> &lhs,
+    const Matrix<nrows, ncols, T, Backend> &other) {
+  Matrix<nrows, ncols, T, Backend> res(lhs.shape());
+  res = lhs;
+  res += other;
+  return res;
+}
+
+template <size_t nrows, size_t ncols, typename T, typename Backend>
+inline Matrix<nrows, ncols, T, Backend> operator+(
+    const Matrix<nrows, ncols, T, Backend> &lhs, const T &other) {
+  Matrix<nrows, ncols, T, Backend> res(lhs.shape());
+  res = lhs;
+  res += other;
+  return res;
+}
+
+template <size_t nrows, size_t ncols, typename T, typename Backend>
+inline Matrix<nrows, ncols, T, Backend> operator-(
+    Matrix<nrows, ncols, T, Backend> &lhs,
+    const Matrix<nrows, ncols, T, Backend> &other) {
+  Matrix<nrows, ncols, T, Backend> res(lhs.shape());
+  res = lhs;
+  res -= other;
+  return res;
+}
+
+template <size_t nrows, size_t ncols, typename T, typename Backend>
+inline Matrix<nrows, ncols, T, Backend> operator-(
+    const Matrix<nrows, ncols, T, Backend> &lhs, const T &other) {
+  Matrix<nrows, ncols, T, Backend> res(lhs.shape());
+  res = lhs;
+  res -= other;
+  return res;
+}
+
+template <size_t nrows, size_t ncols, typename T, typename Backend>
+inline Matrix<nrows, ncols, T, Backend> operator*(
+    const Matrix<nrows, ncols, T, Backend> &lhs,
+    const Matrix<nrows, ncols, T, Backend> &other) {
+  Matrix<nrows, ncols, T, Backend> res(lhs.shape());
+  res = lhs;
+  res *= other;
+  return res;
+}
+
+template <size_t nrows, size_t ncols, typename T, typename Backend>
+inline SCALAR_TIMES_TENSOR<Matrix<nrows, ncols, T, Backend>> operator*(
+    const Matrix<nrows, ncols, T, Backend> &lhs, const T &other) {
+  return SCALAR_TIMES_TENSOR{.sca = other, .vec = lhs};
+}
+
+template <size_t nrows, size_t ncols, typename T, typename Backend>
+inline SCALAR_TIMES_TENSOR<Matrix<nrows, ncols, T, Backend>> operator*(
+    const T &other, const Matrix<nrows, ncols, T, Backend> &lhs) {
+  return SCALAR_TIMES_TENSOR<Matrix<nrows, ncols, T, Backend>>{.sca = other,
+                                                               .vec = lhs};
+}
+
+template <size_t nrows, size_t ncols, typename T, typename Backend>
+inline Matrix<nrows, ncols, T, Backend> operator/(
+    const Matrix<nrows, ncols, T, Backend> &lhs,
+    const Matrix<nrows, ncols, T, Backend> &other) {
+  Matrix<nrows, ncols, T, Backend> res(lhs.shape());
+  res = lhs;
+  res /= other;
+  return res;
+}
+
+template <size_t nrows, size_t ncols, typename T, typename Backend>
+inline SCALAR_TIMES_TENSOR<Matrix<nrows, ncols, T, Backend>> operator/(
+    const Matrix<nrows, ncols, T, Backend> &lhs, const T &other) {
+  return SCALAR_TIMES_TENSOR{.sca = T(1.0) / other, .vec = lhs};
+}
+
+}  // namespace swnumeric

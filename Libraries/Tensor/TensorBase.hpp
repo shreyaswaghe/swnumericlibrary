@@ -5,6 +5,8 @@
 #include <cstddef>
 #include <cstdlib>
 
+namespace swnumeric {
+
 // Some Backends to support
 struct CblasBackend;
 struct SingleBackend;
@@ -71,3 +73,5 @@ struct SCALAR_TIMES_TENSOR {
 // TODO: Specialize TensorTypes to use this memory alignment for
 // TensorType.data()
 constexpr size_t alignmentByteSize = 32;
+
+}  // namespace swnumeric

@@ -1,4 +1,3 @@
-// Copyright (c) 2025 Shreyas Waghe. All Rights Reserved.
 #pragma once
 
 #include <algorithm>
@@ -7,6 +6,8 @@
 
 #include "CblasBackend.hpp"
 #include "TensorBase.hpp"
+
+namespace swnumeric {
 
 //
 // Vector specialization of TensorType, compatible with TensorBaseCRTP
@@ -31,6 +32,20 @@ struct Vector : TensorBaseCRTP<Vector<ssize, T, Backend>> {
 
   // Construction with memory allocation
   Vector(size_t sz = ssize) {
+    if constexpr (ssize == 0) {
+      assert(sz != 0);
+      void *mem = std::malloc(sz * sizeof(DataType));
+      assert(mem != nullptr);
+      dataHolder.heapData = static_cast<DataType *>(mem);
+      _size = sz;
+    } else {
+      _size = ssize;
+    }
+  }
+
+  // Construction with memory allocation
+  Vector(const std::array<size_t, 1> &shape) {
+    size_t sz = shape[0];
     if constexpr (ssize == 0) {
       assert(sz != 0);
       void *mem = std::malloc(sz * sizeof(DataType));
@@ -194,7 +209,6 @@ struct Vector : TensorBaseCRTP<Vector<ssize, T, Backend>> {
   inline DataType norm2() const { return Backend::norm2(*this); }
   inline DataType norm1() const { return Backend::norm2(*this); }
   inline DataType norminf() const { return Backend::norm2(*this); }
-
   inline size_t indexmax() const { return Backend::indexmax(*this); }
 };
 
@@ -277,3 +291,5 @@ inline SCALAR_TIMES_TENSOR<Vector<ssize, T, Backend>> operator/(
     const Vector<ssize, T, Backend> &lhs, const T &other) {
   return SCALAR_TIMES_TENSOR{.sca = T(1.0) / other, .vec = lhs};
 }
+
+}  // namespace swnumeric
