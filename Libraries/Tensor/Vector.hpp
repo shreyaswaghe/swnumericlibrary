@@ -30,14 +30,20 @@ struct Vector : TensorBaseCRTP<Vector<ssize, T, Backend>> {
   } dataHolder;
   size_t _size;
 
+  void alloc(size_t sz) {
+    void *mem = std::malloc(sz * sizeof(DataType));
+    assert(mem != nullptr);
+    dataHolder.heapData = static_cast<DataType *>(mem);
+    _size = sz;
+  }
+
+  bool isAlloc() const { return static_cast<bool>(data()); }
+
   // Construction with memory allocation
   Vector(size_t sz = ssize) {
     if constexpr (ssize == 0) {
-      assert(sz != 0);
-      void *mem = std::malloc(sz * sizeof(DataType));
-      assert(mem != nullptr);
-      dataHolder.heapData = static_cast<DataType *>(mem);
-      _size = sz;
+      if (sz == 0) return;
+      alloc(sz);
     } else {
       _size = ssize;
     }
@@ -47,11 +53,8 @@ struct Vector : TensorBaseCRTP<Vector<ssize, T, Backend>> {
   Vector(const std::array<size_t, 1> &shape) {
     size_t sz = shape[0];
     if constexpr (ssize == 0) {
-      assert(sz != 0);
-      void *mem = std::malloc(sz * sizeof(DataType));
-      assert(mem != nullptr);
-      dataHolder.heapData = static_cast<DataType *>(mem);
-      _size = sz;
+      if (sz == 0) return;
+      alloc(sz);
     } else {
       _size = ssize;
     }

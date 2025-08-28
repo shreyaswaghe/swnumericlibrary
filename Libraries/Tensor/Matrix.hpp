@@ -31,15 +31,21 @@ struct Matrix : TensorBaseCRTP<Matrix<nrows, ncols, T, Backend>> {
   } dataHolder;
   size_t _rows, _cols;
 
+  void alloc(size_t nr, size_t nc) {
+    void *mem = std::malloc(nr * nc * sizeof(DataType));
+    assert(mem != nullptr);
+    dataHolder.heapData = static_cast<DataType *>(mem);
+    _rows = nr;
+    _cols = nc;
+  }
+
+  bool isAlloc() const { return static_cast<bool>(data()); }
+
   // Construction with memory allocation
   Matrix(size_t nr = nrows, size_t nc = ncols) {
     if constexpr (nrows * ncols == 0) {
-      assert(nr * nc != 0);
-      void *mem = std::malloc(nr * nc * sizeof(DataType));
-      assert(mem != nullptr);
-      dataHolder.heapData = static_cast<DataType *>(mem);
-      _rows = nr;
-      _cols = nc;
+      if (nr * nc == 0) return;
+      alloc(nr, nc);
     } else {
       _rows = nrows;
       _cols = ncols;
@@ -50,12 +56,8 @@ struct Matrix : TensorBaseCRTP<Matrix<nrows, ncols, T, Backend>> {
     size_t nr = shape[0];
     size_t nc = shape[1];
     if constexpr (nrows * ncols == 0) {
-      assert(nr * nc != 0);
-      void *mem = std::malloc(nr * nc * sizeof(DataType));
-      assert(mem != nullptr);
-      dataHolder.heapData = static_cast<DataType *>(mem);
-      _rows = nr;
-      _cols = nc;
+      if (nr * nc == 0) return;
+      alloc(nr, nc);
     } else {
       _rows = nrows;
       _cols = ncols;

@@ -7,6 +7,8 @@
 
 #include "../Vector.hpp"
 
+using namespace swnumeric;
+
 class TestFramework {
  public:
   using TestFunc = std::function<bool()>;

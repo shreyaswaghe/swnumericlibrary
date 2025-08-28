@@ -7,6 +7,8 @@
 
 #include "../Matrix.hpp"  // adjust path if needed
 
+using namespace swnumeric;
+
 class TestFramework {
  public:
   using TestFunc = std::function<bool()>;
