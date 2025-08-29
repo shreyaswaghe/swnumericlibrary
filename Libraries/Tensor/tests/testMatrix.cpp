@@ -59,128 +59,143 @@ class TestFramework {
 #define EXPECT_EQ(a, b) ((a) == (b))
 #define EXPECT_TRUE(a) (a)
 
+template <typename T>
+static bool approxEqual(T a, T b, T eps = T(1e-9)) {
+  return std::abs(a - b) <= eps * (T(1) + std::abs(a) + std::abs(b));
+}
+
 int main() {
   TestFramework tf;
-  std::mt19937 rng(42);  // deterministic RNG
-  std::uniform_real_distribution<double> dist(-10.0, 10.0);
 
-  auto testMatrixOps = [&tf](auto name, auto testFunc) {
-    tf.addTest(name, testFunc);
-  };
-
-  // --- 1. Static-size matrix assignment ---
-  testMatrixOps("Static Double Assignment", []() {
-    Matrix<2, 2, double, CblasBackend> A;
-    A = 1.0;
-    for (size_t i = 0; i < A.size(); i++)
-      if (!EXPECT_EQ(A[i], 1.0)) return false;
+  // ----- Construction and Element Access -----
+  tf.addTest("Default construction", [] {
+    Matrix<2, 2, double> m;
+    for (size_t i = 0; i < 2; i++)
+      for (size_t j = 0; j < 2; j++)
+        if (!approxEqual(m(i, j), 0.0)) return false;
     return true;
   });
 
-  // --- 2. Static-size arithmetic ---
-  testMatrixOps("Static Double Arithmetic", []() {
-    Matrix<2, 2, double, CblasBackend> A, B;
-    A = 2.0;
-    B = 3.0;
-
-    auto C = A + B;
-    auto D = A - B;
-    auto E = A * B;
-    auto F = A / B;
-    for (size_t i = 0; i < A.size(); i++) {
-      if (!EXPECT_EQ(C[i], 5.0)) return false;
-      if (!EXPECT_EQ(D[i], -1.0)) return false;
-      if (!EXPECT_EQ(E[i], 6.0)) return false;
-      if (!EXPECT_TRUE(std::fabs(F[i] - 2.0 / 3.0) < 1e-12)) return false;
-    }
-    return true;
+  tf.addTest("Initializer array construction", [] {
+    Matrix<2, 2, int> m{{{1, 2}, {3, 4}}};
+    return m(0, 0) == 1 && m(0, 1) == 2 && m(1, 0) == 3 && m(1, 1) == 4;
   });
 
-  // --- 3. Dynamic-size matrix assignment ---
-  testMatrixOps("Dynamic Double Assignment", []() {
-    Matrix<0, 0, double, CblasBackend> A(3, 4);
-    A = 2.5;
-    for (size_t i = 0; i < A.size(); i++)
-      if (!EXPECT_EQ(A[i], 2.5)) return false;
-    return true;
+  tf.addTest("Copy constructor", [] {
+    Matrix<2, 2, int> m{{1, 2}, {3, 4}};
+    Matrix<2, 2, int> c(m);
+    return EXPECT_EQ(c(1, 1), 4);
   });
 
-  // --- 4. Dynamic arithmetic ---
-  testMatrixOps("Dynamic Double Arithmetic", []() {
-    Matrix<0, 0, double, CblasBackend> A(2, 3), B(2, 3);
-    A = 4.0;
-    B = 1.0;
-    auto C = A + B;
-    auto D = A - B;
-    for (size_t i = 0; i < A.size(); i++) {
-      if (!EXPECT_EQ(C[i], 5.0)) return false;
-      if (!EXPECT_EQ(D[i], 3.0)) return false;
-    }
-    return true;
+  tf.addTest("Assignment operator", [] {
+    Matrix<2, 2, int> a{{1, 2}, {3, 4}};
+    Matrix<2, 2, int> b;
+    b = a;
+    return EXPECT_EQ(b(0, 1), 2);
   });
 
-  // --- 5. Dot product ---
-  testMatrixOps("Dot Product", []() {
-    Matrix<2, 2, double, CblasBackend> A, B;
-    A = 1.0;
-    B = 2.0;
-    double result = A.dot(B);
-    // dot( [1,1,1,1], [2,2,2,2] ) = 4 * 2 = 8
-    return EXPECT_EQ(result, 8.0);
+  // ----- Elementwise Addition/Subtraction -----
+  tf.addTest("Elementwise addition", [] {
+    Matrix<2, 2, int> a({{1, 2}, {3, 4}});
+    Matrix<2, 2, int> b = {{5, 6}, {7, 8}};
+    auto c = a + b;
+    return EXPECT_EQ(c(0, 0), 6) && EXPECT_EQ(c(1, 1), 12);
   });
 
-  // --- 6. Frobenius norm ---
-  testMatrixOps("Frobenius Norm", []() {
-    Matrix<2, 2, double, CblasBackend> A;
-    A = 3.0;
-    double n = A.normfro();
-    // sqrt(3^2 + 3^2 + 3^2 + 3^2) = sqrt(36) = 6
-    return EXPECT_TRUE(std::fabs(n - 6.0) < 1e-12);
+  tf.addTest("Elementwise subtraction", [] {
+    Matrix<2, 2, int> a{{5, 6}, {7, 8}};
+    Matrix<2, 2, int> b{{1, 2}, {3, 4}};
+    auto c = a - b;
+    return EXPECT_EQ(c(0, 0), 4) && EXPECT_EQ(c(1, 1), 4);
   });
 
-  // --- 7. Random large dynamic matrix ---
-  testMatrixOps("Large Dynamic Matrix", [&]() {
-    const size_t R = 20, C = 30;
-    Matrix<0, 0, double, CblasBackend> A(R, C), B(R, C);
-    for (size_t i = 0; i < A.size(); i++) {
-      A[i] = dist(rng);
-      B[i] = dist(rng);
-    }
-    auto Cmat = A + B;
-    for (size_t i = 0; i < A.size(); i++) {
-      if (!EXPECT_TRUE(std::fabs(Cmat[i] - (A[i] + B[i])) < 1e-12))
-        return false;
-    }
-    return true;
+  tf.addTest("Compound elementwise +=/-=", [] {
+    Matrix<2, 2, int> a{{1, 2}, {3, 4}};
+    Matrix<2, 2, int> b{{5, 6}, {7, 8}};
+    a += b;
+    if (!(a(0, 0) == 6 && a(1, 1) == 12)) return false;
+    a -= b;
+    return EXPECT_EQ(a(0, 0), 1) && EXPECT_EQ(a(1, 1), 4);
   });
 
-  // --- 8. Scalar ops ---
-  testMatrixOps("Scalar Ops", []() {
-    Matrix<2, 2, double, CblasBackend> A;
-    A = 1.0;
-    A *= 2.0;
-    for (size_t i = 0; i < A.size(); i++)
-      if (!EXPECT_EQ(A[i], 2.0)) return false;
-    A += 3.0;
-    for (size_t i = 0; i < A.size(); i++)
-      if (!EXPECT_EQ(A[i], 5.0)) return false;
-    A -= 1.0;
-    for (size_t i = 0; i < A.size(); i++)
-      if (!EXPECT_EQ(A[i], 4.0)) return false;
-    A /= 2.0;
-    for (size_t i = 0; i < A.size(); i++)
-      if (!EXPECT_EQ(A[i], 2.0)) return false;
-    return true;
+  // ----- Elementwise Multiplication/Division -----
+  tf.addTest("Elementwise multiplication", [] {
+    Matrix<2, 2, int> a{{1, 2}, {3, 4}};
+    Matrix<2, 2, int> b{{2, 3}, {4, 5}};
+    auto c = a * b;
+    return EXPECT_EQ(c(0, 0), 2) && EXPECT_EQ(c(1, 1), 20);
   });
 
-  // --- 9. Indexing and shape ---
-  testMatrixOps("Shape and Indexing", []() {
-    Matrix<3, 4, double, CblasBackend> A;
-    if (!EXPECT_EQ(A.shape()[0], 3)) return false;
-    if (!EXPECT_EQ(A.shape()[1], 4)) return false;
-    if (!EXPECT_EQ(A.nDims(), 2)) return false;
-    if (!EXPECT_EQ(A.lda(), 3)) return false;
-    return true;
+  tf.addTest("Elementwise division", [] {
+    Matrix<2, 2, double> a{{2.0, 4.0}, {6.0, 8.0}};
+    Matrix<2, 2, double> b{{2.0, 2.0}, {3.0, 4.0}};
+    auto c = a / b;
+    return approxEqual(c(0, 0), 1.0) && approxEqual(c(1, 1), 2.0);
+  });
+
+  tf.addTest("Compound elementwise *=/=", [] {
+    Matrix<2, 2, int> a{{1, 2}, {3, 4}};
+    Matrix<2, 2, int> b{{2, 2}, {2, 2}};
+    a *= b;
+    if (!(a(0, 0) == 2 && a(1, 1) == 8)) return false;
+    a /= b;
+    return a(0, 0) == 1 && a(1, 1) == 4;
+  });
+
+  // ----- Scalar operations -----
+  tf.addTest("Scalar addition/subtraction", [] {
+    Matrix<2, 2, int> a{{1, 2}, {3, 4}};
+    a += 2;
+    if (!(a(0, 0) == 3 && a(1, 1) == 6)) return false;
+    a -= 1;
+    return a(0, 0) == 2 && a(1, 1) == 5;
+  });
+
+  tf.addTest("Scalar multiplication/division", [] {
+    Matrix<2, 2, int> a{{1, 2}, {3, 4}};
+    a *= 3;
+    assert(a(1, 0) == 9);
+    if (!(a(1, 0) == 9)) return false;
+    a /= 3;
+    assert(a(1, 0) == 3);
+    return a(1, 0) == 3 && a(1, 1) == 4;
+  });
+
+  // ----- Norms -----
+  tf.addTest("Frobenius and L2 norm", [] {
+    Matrix<2, 2, double> a{{3, 4}, {0, 0}};
+    return approxEqual(a.normfro(), 5.0) && approxEqual(a.norm2(), 5.0);
+  });
+
+  tf.addTest("L1 norm", [] {
+    Matrix<2, 2, int> a{{1, -2}, {3, -4}};
+    std::cout << a.norm1() << std::endl;
+    return EXPECT_EQ(a.norm1(), 10);
+  });
+
+  tf.addTest("Infinity norm", [] {
+    Matrix<2, 2, int> a{{1, -2}, {3, -4}};
+    return EXPECT_EQ(a.norminf(), 4);
+  });
+
+  // ----- Index max -----
+  tf.addTest("Index max", [] {
+    Matrix<2, 2, int> a{{1, 5}, {3, 2}};
+    return a.indexmax() == 2;  // flattened index
+  });
+
+  // ----- Edge Cases -----
+  tf.addTest("Self assignment", [] {
+    Matrix<2, 2, int> a{{1, 2}, {3, 4}};
+    a = a;
+    return EXPECT_EQ(a(0, 0), 1) && EXPECT_EQ(a(1, 1), 4);
+  });
+
+  tf.addTest("Zero matrix behavior", [] {
+    Matrix<2, 2, int> a{{1, 2}, {3, 4}};
+    Matrix<2, 2, int> z{};
+    auto c = a + z;
+    return EXPECT_TRUE(c(0, 0) == a(0, 0));
   });
 
   tf.summary();

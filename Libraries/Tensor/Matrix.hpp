@@ -28,8 +28,8 @@ struct Matrix : TensorBaseCRTP<Matrix<nrows, ncols, T, Backend>> {
   union {
     DataType *heapData;
     DataType staticData[nrows * ncols > 0 ? nrows *ncols : 1];
-  } dataHolder;
-  size_t _rows, _cols;
+  } dataHolder = {nullptr};
+  size_t _rows = 0, _cols = 0;
 
   void alloc(size_t nr, size_t nc) {
     void *mem = std::malloc(nr * nc * sizeof(DataType));
@@ -39,7 +39,12 @@ struct Matrix : TensorBaseCRTP<Matrix<nrows, ncols, T, Backend>> {
     _cols = nc;
   }
 
-  bool isAlloc() const { return static_cast<bool>(data()); }
+  bool isAlloc() const {
+    if constexpr (nrows * ncols == 0)
+      return dataHolder.heapData != nullptr;
+    else
+      return true;
+  }
 
   // Construction with memory allocation
   Matrix(size_t nr = nrows, size_t nc = ncols) {
@@ -64,11 +69,24 @@ struct Matrix : TensorBaseCRTP<Matrix<nrows, ncols, T, Backend>> {
     }
   }
 
-  // Construction from array-like objects
-  // Disable construction from initializer list since its size cannot be
-  // obtained at compile time in C++20
+  Matrix(std::initializer_list<std::initializer_list<DataType>> init)
+      : Matrix(init.size(), init.size() > 0 ? init.begin()->size() : 0) {
+    size_t i = 0;
+    for (auto rowIt = init.begin(); rowIt != init.end(); ++rowIt, ++i) {
+      size_t j = 0;
+      for (auto colIt = rowIt->begin(); colIt != rowIt->end(); ++colIt, ++j) {
+        (*this)[idx(i, j)] = *colIt;
+      }
+    }
+  }
   Matrix(const std::array<std::array<DataType, ncols>, nrows> &vals)
-      : Matrix(nrows, ncols) {}
+      : Matrix(nrows, ncols) {
+    for (size_t i = 0; i < nrows; i++) {
+      for (size_t j = 0; j < ncols; j++) {
+        (*this)[idx(i, j)] = vals[i][j];
+      }
+    }
+  }
 
   // Copy construction
   Matrix(const Matrix &other) {
@@ -92,7 +110,10 @@ struct Matrix : TensorBaseCRTP<Matrix<nrows, ncols, T, Backend>> {
     if (this == &other) return *this;
     if constexpr (nrows * ncols == 0) {
       assert(_rows == other._rows && _cols == other._cols);
-      if (dataHolder.heapData) std::free(dataHolder.heapData);
+      if (dataHolder.heapData) {
+        std::free(dataHolder.heapData);
+        dataHolder.heapData = nullptr;
+      }
       _rows = other._rows;
       _cols = other._cols;
       if (_rows * _cols > 0) {
@@ -129,7 +150,10 @@ struct Matrix : TensorBaseCRTP<Matrix<nrows, ncols, T, Backend>> {
   Matrix &operator=(Matrix &&other) noexcept {
     if (this == &other) return *this;
     if constexpr (nrows * ncols == 0) {
-      if (dataHolder.heapData) std::free(dataHolder.heapData);
+      if (dataHolder.heapData) {
+        std::free(dataHolder.heapData);
+        dataHolder.heapData = nullptr;
+      }
       dataHolder.heapData = other.dataHolder.heapData;
       _rows = other._rows;
       _cols = other._cols;
@@ -175,6 +199,7 @@ struct Matrix : TensorBaseCRTP<Matrix<nrows, ncols, T, Backend>> {
 
   inline const DataType *operator()(size_t i) const { return data() + i; }
   inline DataType *operator()(size_t i) { return data() + i; }
+  inline DataType operator()(size_t i, size_t j) { return data()[idx(i, j)]; }
 
   //
   // Shape Information Getters
@@ -186,6 +211,7 @@ struct Matrix : TensorBaseCRTP<Matrix<nrows, ncols, T, Backend>> {
   inline const size_t lda() const { return _rows; }
   inline const size_t rows() const { return _rows; }
   inline const size_t cols() const { return _cols; }
+  inline const size_t idx(size_t r, size_t c) { return r + c * lda(); }
 
   //
   // Backend handles specialization of operators
@@ -225,13 +251,10 @@ struct Matrix : TensorBaseCRTP<Matrix<nrows, ncols, T, Backend>> {
     return Backend::dot(*this, other);
   }
 
-  inline DataType sdot(const Matrix &other) const {
-    return Backend::sdot(*this, other);
-  }
-
   inline DataType normfro() const { return Backend::norm2(*this); }
-  inline DataType norm1() const { return Backend::norm2(*this); }
-  inline DataType norminf() const { return Backend::norm2(*this); }
+  inline DataType norm2() const { return Backend::norm2(*this); }
+  inline DataType norm1() const { return Backend::norm1(*this); }
+  inline DataType norminf() const { return Backend::norminf(*this); }
 
   inline size_t indexmax() const { return Backend::indexmax(*this); }
 };
