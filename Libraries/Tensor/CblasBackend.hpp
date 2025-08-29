@@ -228,25 +228,6 @@ struct CblasBackend {
     }
   }
 
-  template <typename TensorType>
-  inline static typename TensorType::DataType sdot(
-      const TensorBaseCRTP<TensorType>& lhs,
-      const TensorBaseCRTP<TensorType>& rhs) {
-    if constexpr (TensorTraits<TensorType>::_csize == 0) {
-      assert(lhs.nDims() == rhs.vec.nDims());
-      assert(lhs.shape() == rhs.shape());
-    };
-
-    if constexpr (std::is_same_v<typename TensorType::DataType, double>) {
-      return cblas_dsdot(lhs.size(), lhs.data(), 1, rhs.data(), 1);
-    } else if constexpr (std::is_same_v<typename TensorType::DataType, float>) {
-      return cblas_sdsdot(lhs.size(), lhs.data(), 1, rhs.data(), 1);
-    } else {
-      typename TensorType::DataType acc = 0.0;
-      for (size_t i = 0; i < lhs.size(); i++) acc += lhs[i] * rhs[i];
-    }
-  }
-
   //
   // NORMS
   //

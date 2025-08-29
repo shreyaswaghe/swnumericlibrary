@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <iostream>
 
 #include "CblasBackend.hpp"
 #include "TensorBase.hpp"
@@ -27,8 +28,8 @@ struct Vector : TensorBaseCRTP<Vector<ssize, T, Backend>> {
   union {
     DataType *heapData;
     DataType staticData[ssize > 0 ? ssize : 1];
-  } dataHolder;
-  size_t _size;
+  } dataHolder = {nullptr};
+  size_t _size = 0;
 
   void alloc(size_t sz) {
     void *mem = std::malloc(sz * sizeof(DataType));
@@ -37,7 +38,12 @@ struct Vector : TensorBaseCRTP<Vector<ssize, T, Backend>> {
     _size = sz;
   }
 
-  bool isAlloc() const { return static_cast<bool>(data()); }
+  bool isAlloc() const {
+    if constexpr (ssize == 0)
+      return dataHolder.heapData != nullptr;
+    else
+      return true;
+  }
 
   // Construction with memory allocation
   Vector(size_t sz = ssize) {
@@ -85,7 +91,10 @@ struct Vector : TensorBaseCRTP<Vector<ssize, T, Backend>> {
   Vector &operator=(const Vector &other) {
     if (this == &other) return *this;
     if constexpr (ssize == 0) {
-      if (dataHolder.heapData) std::free(dataHolder.heapData);
+      if (dataHolder.heapData) {
+        std::free(dataHolder.heapData);
+        dataHolder.heapData = nullptr;
+      }
       _size = other._size;
       if (_size > 0) {
         dataHolder.heapData =
@@ -115,7 +124,10 @@ struct Vector : TensorBaseCRTP<Vector<ssize, T, Backend>> {
   Vector &operator=(Vector &&other) noexcept {
     if (this == &other) return *this;
     if constexpr (ssize == 0) {
-      if (dataHolder.heapData) std::free(dataHolder.heapData);
+      if (dataHolder.heapData) {
+        std::free(dataHolder.heapData);
+        dataHolder.heapData = nullptr;
+      }
       dataHolder.heapData = other.dataHolder.heapData;
       _size = other._size;
       other.dataHolder.heapData = nullptr;
@@ -202,17 +214,19 @@ struct Vector : TensorBaseCRTP<Vector<ssize, T, Backend>> {
   }
 
   inline DataType dot(const Vector &other) const {
+    if (size() == 0) return DataType(0);
     return Backend::dot(*this, other);
   }
 
-  inline DataType sdot(const Vector &other) const {
-    return Backend::sdot(*this, other);
-  }
-
   inline DataType norm2() const { return Backend::norm2(*this); }
-  inline DataType norm1() const { return Backend::norm2(*this); }
-  inline DataType norminf() const { return Backend::norm2(*this); }
-  inline size_t indexmax() const { return Backend::indexmax(*this); }
+  inline DataType norm1() const { return Backend::norm1(*this); }
+  inline DataType norminf() const { return Backend::norminf(*this); }
+
+  inline size_t indexmax() const {
+    std::cout << size() << std::endl;
+    if (size() == 0) return size_t(-1);
+    return Backend::indexmax(*this);
+  }
 };
 
 //
