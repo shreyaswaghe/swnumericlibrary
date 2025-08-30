@@ -44,23 +44,42 @@ struct TensorBaseCRTP {
   using Traits = TensorTraits<DerivedType>;
   using DataType = typename Traits::DataType;
 
+  // CRTP
   DerivedType& derived() { return static_cast<DerivedType&>(*this); }
   const DerivedType& derived() const {
     return static_cast<const DerivedType&>(*this);
   }
 
+  // allocation for dynamic types
+  void alloc(
+      const std::array<size_t, TensorTraits<DerivedType>::_nDims>& shape) {
+    return derived().alloc(shape);
+  }
+  bool isAlloc() const { return derived().isAlloc(); }
+
+  // Simple accessors
+
+  // expect these to return a pointer to the underlying data
   DataType* data() { return derived().data(); }
   const DataType* data() const { return derived().data(); }
 
+  // expect these to return a pointer to data + i
   DataType* operator()(size_t i) { return derived()(i); }
   const DataType* operator()(size_t i) const { return derived()(i); }
 
+  // expect these to return data[i]
   DataType& operator[](size_t i) { return derived()[i]; }
   const DataType& operator[](size_t i) const { return derived()[i]; }
 
+  // self explanatory shape descriptors
   size_t size() const { return derived().size(); }
   std::array<size_t, Traits::_nDims> shape() const { return derived().shape(); }
   size_t nDims() const { return Traits::_nDims; }
+
+  // Simple Information Setters
+  inline void setConstant(const DataType& val) { derived().setConstant(val); }
+  inline void setZero() { derived().setZero(); }
+  inline void setOnes() { derived().setOnes(); }
 };
 
 // Helper Implementation Data Aggregate

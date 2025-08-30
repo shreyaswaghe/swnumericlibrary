@@ -90,3 +90,4 @@ target_include_directories(swnumeric PUBLIC ${CMAKE_SOURCE_DIR})
 target_sources(swnumeric PUBLIC dummy.cpp)
 
 add_subdirectory(Libraries)
+add_subdirectory(Routines)

@@ -31,6 +31,10 @@ struct Matrix : TensorBaseCRTP<Matrix<nrows, ncols, T, Backend>> {
   } dataHolder = {nullptr};
   size_t _rows = 0, _cols = 0;
 
+  void alloc(const std::array<size_t, TensorTraits<Matrix>::_nDims> &shape) {
+    alloc(shape[0], shape[1]);
+  }
+
   void alloc(size_t nr, size_t nc) {
     void *mem = std::malloc(nr * nc * sizeof(DataType));
     assert(mem != nullptr);
@@ -199,19 +203,28 @@ struct Matrix : TensorBaseCRTP<Matrix<nrows, ncols, T, Backend>> {
 
   inline const DataType *operator()(size_t i) const { return data() + i; }
   inline DataType *operator()(size_t i) { return data() + i; }
-  inline DataType operator()(size_t i, size_t j) { return data()[idx(i, j)]; }
+  inline DataType &operator()(size_t i, size_t j) { return data()[idx(i, j)]; }
+  inline const DataType &operator()(size_t i, size_t j) const {
+    return data()[idx(i, j)];
+  }
 
   //
   // Shape Information Getters
   //
-
   inline const size_t size() const { return _rows * _cols; }
   inline const std::array<size_t, 2> shape() const { return {_rows, _cols}; }
   inline const size_t nDims() const { return TensorTraits<Matrix>::_nDims; }
   inline const size_t lda() const { return _rows; }
   inline const size_t rows() const { return _rows; }
   inline const size_t cols() const { return _cols; }
-  inline const size_t idx(size_t r, size_t c) { return r + c * lda(); }
+  inline const size_t idx(size_t r, size_t c) const { return r + c * lda(); }
+
+  // Simple information setters
+  inline void setConstant(const DataType &val) {
+    if (isAlloc()) std::fill_n(data(), size(), val);
+  }
+  inline void setZero() { setConstant(DataType(0)); }
+  inline void setOnes() { setConstant(DataType(1)); }
 
   //
   // Backend handles specialization of operators

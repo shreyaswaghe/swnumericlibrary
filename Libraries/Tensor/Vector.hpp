@@ -31,6 +31,10 @@ struct Vector : TensorBaseCRTP<Vector<ssize, T, Backend>> {
   } dataHolder = {nullptr};
   size_t _size = 0;
 
+  void alloc(const std::array<size_t, TensorTraits<Vector>::_nDims> &shape) {
+    alloc(shape[0]);
+  }
+
   void alloc(size_t sz) {
     void *mem = std::malloc(sz * sizeof(DataType));
     assert(mem != nullptr);
@@ -178,6 +182,13 @@ struct Vector : TensorBaseCRTP<Vector<ssize, T, Backend>> {
   inline const size_t size() const { return _size; }
   inline const std::array<size_t, 1> shape() const { return {_size}; }
   inline const size_t nDims() const { return TensorTraits<Vector>::_nDims; }
+
+  // Simple Information Setters
+  inline void setConstant(const DataType &val) {
+    if (isAlloc()) std::fill_n(data(), size(), val);
+  }
+  inline void setZero() { setConstant(DataType(0)); }
+  inline void setOnes() { setConstant(DataType(1)); }
 
   //
   // Backend handles specialization of operators
