@@ -142,12 +142,16 @@ struct RungeKutta45 {
   StateType l5;
   StateType l6;
 
-  std::vector<uint32_t> numLoopEvals;
+  std::vector<uint8_t> numLoopEvals;
   std::vector<float> timeSteps;
 
   double h = 1;
   double hmin = 1e-6, hmax = 1e+2;
   double atol = 1e-6, rtol = 1e-6;
+
+  double updateUnderestimationFactor = 0.97;
+  double updateStepMinFactor = 1.0 / 20.0;
+  double updateStepMaxFactor = 20.0;
 
   char maxIter = 48;
   bool recordStats = false;
@@ -256,8 +260,11 @@ struct RungeKutta45 {
       err_estimate /= atol + rtol * stateNorm;
 
       // compute proposed update timestep
-      hprop = 0.97 * h * std::pow(err_estimate, -0.20);
-      h = (h >= 0.0 ? std::max(hprop, 0.05 * h) : std::min(hprop, 20 * h));
+
+      // the -0.20 comes in from err ~ C h ^ 5 => h = (err / C)^(1/5)
+      hprop = updateUnderestimationFactor * h * std::pow(err_estimate, -0.20);
+      h = (h >= 0.0 ? std::max(hprop, updateStepMinFactor * h)
+                    : std::min(hprop, updateStepMaxFactor * h));
       h = std::max(h, hmin);
 
       if (err_estimate <= 1.0 || h == hmin) {
