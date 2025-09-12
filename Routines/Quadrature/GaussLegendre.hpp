@@ -98,7 +98,7 @@ struct GaussLegendre {
 
  public:
   template <uint8_t points, typename Func>
-  double eval(const Func& I) {
+  inline double eval(const Func& I) {
     static_assert(std::is_invocable_r_v<double, Func, const double>,
                   "Ensure that input function is double(double)");
     static_assert((points == 2) || (points == 4) || (points == 8) ||
