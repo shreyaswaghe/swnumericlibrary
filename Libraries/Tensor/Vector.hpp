@@ -6,6 +6,7 @@
 #include <iostream>
 
 #include "CblasBackend.hpp"
+#include "Libraries/Random/RngStreams.hpp"
 #include "TensorBase.hpp"
 
 namespace swnumeric {
@@ -189,6 +190,11 @@ struct Vector : TensorBaseCRTP<Vector<ssize, T, Backend>> {
   }
   inline void setZero() { setConstant(DataType(0)); }
   inline void setOnes() { setConstant(DataType(1)); }
+  inline void setRandomU01(RngStream &rng) {
+    for (size_t i = 0; i < size(); i++) {
+      data()[i] = rng.RandU01();
+    }
+  }
 
   //
   // Backend handles specialization of operators

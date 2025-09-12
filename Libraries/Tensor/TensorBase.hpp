@@ -5,6 +5,8 @@
 #include <cstddef>
 #include <cstdlib>
 
+#include "Libraries/Random/RngStreams.hpp"
+
 namespace swnumeric {
 
 // Some Backends to support
@@ -80,6 +82,7 @@ struct TensorBaseCRTP {
   inline void setConstant(const DataType& val) { derived().setConstant(val); }
   inline void setZero() { derived().setZero(); }
   inline void setOnes() { derived().setOnes(); }
+  inline void setRandomU01(RngStream& rng) { derived().setRandomU01(rng); }
 };
 
 // Helper Implementation Data Aggregate
