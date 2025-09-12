@@ -432,5 +432,9 @@ void testZeroIntegrationTime() {
 int main() {
   testExponentialDecayIntegration();
   testIntegratorTolerances();
+  testExponentialDecayMatrixGradient();
+  testExponentialDecayMatrixNorm();
+  testFastDecayAdaptiveStep();
+  testSlowDecayLargeStep();
   return 0;
 }
