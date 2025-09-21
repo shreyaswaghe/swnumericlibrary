@@ -99,8 +99,10 @@ struct GaussLegendre {
  public:
   template <uint8_t points, typename Func>
   inline double eval(const Func& I) {
-    static_assert(std::is_invocable_r_v<double, Func, const double>,
-                  "Ensure that input function is double(double)");
+    static_assert(
+        std::is_invocable_r_v<double, Func, const double> or
+            std::is_invocable_r_v<float, Func, const double>,
+        "Ensure that input function is double(double) or float(double)");
     static_assert((points == 2) || (points == 4) || (points == 8) ||
                       (points == 16) || (points == 32) || (points == 64),
                   "Can only have 2,4,8,16,32 or 64 GL integration points");
