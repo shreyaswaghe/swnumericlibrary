@@ -27,19 +27,19 @@ struct Matrix : TensorBaseCRTP<Matrix<nrows, ncols, T, Backend>> {
  public:
   using DataType = TensorTraits<Matrix>::DataType;
   union {
-    DataType *heapData;
-    DataType staticData[nrows * ncols > 0 ? nrows *ncols : 1];
+    DataType* heapData;
+    DataType staticData[nrows * ncols > 0 ? nrows* ncols : 1];
   } dataHolder = {nullptr};
   size_t _rows = 0, _cols = 0;
 
-  void alloc(const std::array<size_t, TensorTraits<Matrix>::_nDims> &shape) {
+  void alloc(const std::array<size_t, TensorTraits<Matrix>::_nDims>& shape) {
     alloc(shape[0], shape[1]);
   }
 
   void alloc(size_t nr, size_t nc) {
-    void *mem = std::malloc(nr * nc * sizeof(DataType));
+    void* mem = std::malloc(nr * nc * sizeof(DataType));
     assert(mem != nullptr);
-    dataHolder.heapData = static_cast<DataType *>(mem);
+    dataHolder.heapData = static_cast<DataType*>(mem);
     _rows = nr;
     _cols = nc;
   }
@@ -62,7 +62,7 @@ struct Matrix : TensorBaseCRTP<Matrix<nrows, ncols, T, Backend>> {
     }
   }
 
-  Matrix(const std::array<size_t, 2> &shape) {
+  Matrix(const std::array<size_t, 2>& shape) {
     size_t nr = shape[0];
     size_t nc = shape[1];
     if constexpr (nrows * ncols == 0) {
@@ -84,7 +84,7 @@ struct Matrix : TensorBaseCRTP<Matrix<nrows, ncols, T, Backend>> {
       }
     }
   }
-  Matrix(const std::array<std::array<DataType, ncols>, nrows> &vals)
+  Matrix(const std::array<std::array<DataType, ncols>, nrows>& vals)
       : Matrix(nrows, ncols) {
     for (size_t i = 0; i < nrows; i++) {
       for (size_t j = 0; j < ncols; j++) {
@@ -94,12 +94,12 @@ struct Matrix : TensorBaseCRTP<Matrix<nrows, ncols, T, Backend>> {
   }
 
   // Copy construction
-  Matrix(const Matrix &other) {
+  Matrix(const Matrix& other) {
     _rows = other._rows;
     _cols = other._cols;
     if constexpr (nrows * ncols == 0) {
       if (_rows * _cols > 0) {
-        dataHolder.heapData = static_cast<DataType *>(
+        dataHolder.heapData = static_cast<DataType*>(
             std::malloc(_rows * _cols * sizeof(DataType)));
         std::copy(other.data(), other.data() + _rows * _cols,
                   dataHolder.heapData);
@@ -111,7 +111,7 @@ struct Matrix : TensorBaseCRTP<Matrix<nrows, ncols, T, Backend>> {
   }
 
   // Copy assignment
-  Matrix &operator=(const Matrix &other) {
+  Matrix& operator=(const Matrix& other) {
     if (this == &other) return *this;
     if constexpr (nrows * ncols == 0) {
       assert(_rows == other._rows && _cols == other._cols);
@@ -122,7 +122,7 @@ struct Matrix : TensorBaseCRTP<Matrix<nrows, ncols, T, Backend>> {
       _rows = other._rows;
       _cols = other._cols;
       if (_rows * _cols > 0) {
-        dataHolder.heapData = static_cast<DataType *>(
+        dataHolder.heapData = static_cast<DataType*>(
             std::malloc(_rows * _cols * sizeof(DataType)));
         std::copy(other.data(), other.data() + _rows * _cols,
                   dataHolder.heapData);
@@ -137,7 +137,7 @@ struct Matrix : TensorBaseCRTP<Matrix<nrows, ncols, T, Backend>> {
   }
 
   // Move constructor
-  Matrix(Matrix &&other) noexcept {
+  Matrix(Matrix&& other) noexcept {
     _rows = other._rows;
     _cols = other._cols;
     if constexpr (nrows * ncols == 0) {
@@ -152,7 +152,7 @@ struct Matrix : TensorBaseCRTP<Matrix<nrows, ncols, T, Backend>> {
   }
 
   // Move assignment
-  Matrix &operator=(Matrix &&other) noexcept {
+  Matrix& operator=(Matrix&& other) noexcept {
     if (this == &other) return *this;
     if constexpr (nrows * ncols == 0) {
       if (dataHolder.heapData) {
@@ -185,27 +185,27 @@ struct Matrix : TensorBaseCRTP<Matrix<nrows, ncols, T, Backend>> {
   // Simple Accessors
   //
 
-  inline DataType *data() {
+  inline DataType* data() {
     if constexpr (nrows * ncols == 0)
       return dataHolder.heapData;
     else
       return dataHolder.staticData;
   }
 
-  inline const DataType *data() const {
+  inline const DataType* data() const {
     if constexpr (nrows * ncols == 0)
       return dataHolder.heapData;
     else
       return dataHolder.staticData;
   }
 
-  inline const DataType &operator[](size_t i) const { return data()[i]; }
-  inline DataType &operator[](size_t i) { return data()[i]; }
+  inline const DataType& operator[](size_t i) const { return data()[i]; }
+  inline DataType& operator[](size_t i) { return data()[i]; }
 
-  inline const DataType *operator()(size_t i) const { return data() + i; }
-  inline DataType *operator()(size_t i) { return data() + i; }
-  inline DataType &operator()(size_t i, size_t j) { return data()[idx(i, j)]; }
-  inline const DataType &operator()(size_t i, size_t j) const {
+  inline const DataType* operator()(size_t i) const { return data() + i; }
+  inline DataType* operator()(size_t i) { return data() + i; }
+  inline DataType& operator()(size_t i, size_t j) { return data()[idx(i, j)]; }
+  inline const DataType& operator()(size_t i, size_t j) const {
     return data()[idx(i, j)];
   }
 
@@ -221,13 +221,13 @@ struct Matrix : TensorBaseCRTP<Matrix<nrows, ncols, T, Backend>> {
   inline const size_t idx(size_t r, size_t c) const { return r + c * lda(); }
 
   // Simple information setters
-  inline void setConstant(const DataType &val) {
+  inline void setConstant(const DataType& val) {
     if (isAlloc()) std::fill_n(data(), size(), val);
   }
   inline void setZero() { setConstant(DataType(0)); }
   inline void setOnes() { setConstant(DataType(1)); }
 
-  inline void setRandomU01(RngStream &rng) {
+  inline void setRandomU01(RngStream& rng) {
     for (size_t i = 0; i < size(); i++) {
       data()[i] = rng.RandU01();
     }
@@ -238,36 +238,36 @@ struct Matrix : TensorBaseCRTP<Matrix<nrows, ncols, T, Backend>> {
   //
 
   template <typename Expr>
-  inline Matrix &operator+=(const Expr &other) {
+  inline Matrix& operator+=(const Expr& other) {
     Backend::add(*this, other);
     return *this;
   }
 
   template <typename Expr>
-  inline Matrix &operator-=(const Expr &other) {
+  inline Matrix& operator-=(const Expr& other) {
     Backend::subtract(*this, other);
     return *this;
   }
 
   template <typename Expr>
-  inline Matrix &operator*=(const Expr &other) {
+  inline Matrix& operator*=(const Expr& other) {
     Backend::multiply(*this, other);
     return *this;
   }
 
   template <typename Expr>
-  inline Matrix &operator/=(const Expr &other) {
+  inline Matrix& operator/=(const Expr& other) {
     Backend::divide(*this, other);
     return *this;
   }
 
   template <typename Expr>
-  inline Matrix &operator=(const Expr &other) {
+  inline Matrix& operator=(const Expr& other) {
     Backend::assign(*this, other);
     return *this;
   }
 
-  inline DataType dot(const Matrix &other) const {
+  inline DataType dot(const Matrix& other) const {
     return Backend::dot(*this, other);
   }
 
@@ -285,8 +285,8 @@ struct Matrix : TensorBaseCRTP<Matrix<nrows, ncols, T, Backend>> {
 
 template <size_t nrows, size_t ncols, typename T, typename Backend>
 inline Matrix<nrows, ncols, T, Backend> operator+(
-    const Matrix<nrows, ncols, T, Backend> &lhs,
-    const Matrix<nrows, ncols, T, Backend> &other) {
+    const Matrix<nrows, ncols, T, Backend>& lhs,
+    const Matrix<nrows, ncols, T, Backend>& other) {
   Matrix<nrows, ncols, T, Backend> res(lhs.shape());
   res = lhs;
   res += other;
@@ -295,7 +295,7 @@ inline Matrix<nrows, ncols, T, Backend> operator+(
 
 template <size_t nrows, size_t ncols, typename T, typename Backend>
 inline Matrix<nrows, ncols, T, Backend> operator+(
-    const Matrix<nrows, ncols, T, Backend> &lhs, const T &other) {
+    const Matrix<nrows, ncols, T, Backend>& lhs, const T& other) {
   Matrix<nrows, ncols, T, Backend> res(lhs.shape());
   res = lhs;
   res += other;
@@ -304,8 +304,8 @@ inline Matrix<nrows, ncols, T, Backend> operator+(
 
 template <size_t nrows, size_t ncols, typename T, typename Backend>
 inline Matrix<nrows, ncols, T, Backend> operator-(
-    Matrix<nrows, ncols, T, Backend> &lhs,
-    const Matrix<nrows, ncols, T, Backend> &other) {
+    Matrix<nrows, ncols, T, Backend>& lhs,
+    const Matrix<nrows, ncols, T, Backend>& other) {
   Matrix<nrows, ncols, T, Backend> res(lhs.shape());
   res = lhs;
   res -= other;
@@ -314,7 +314,7 @@ inline Matrix<nrows, ncols, T, Backend> operator-(
 
 template <size_t nrows, size_t ncols, typename T, typename Backend>
 inline Matrix<nrows, ncols, T, Backend> operator-(
-    const Matrix<nrows, ncols, T, Backend> &lhs, const T &other) {
+    const Matrix<nrows, ncols, T, Backend>& lhs, const T& other) {
   Matrix<nrows, ncols, T, Backend> res(lhs.shape());
   res = lhs;
   res -= other;
@@ -323,8 +323,8 @@ inline Matrix<nrows, ncols, T, Backend> operator-(
 
 template <size_t nrows, size_t ncols, typename T, typename Backend>
 inline Matrix<nrows, ncols, T, Backend> operator*(
-    const Matrix<nrows, ncols, T, Backend> &lhs,
-    const Matrix<nrows, ncols, T, Backend> &other) {
+    const Matrix<nrows, ncols, T, Backend>& lhs,
+    const Matrix<nrows, ncols, T, Backend>& other) {
   Matrix<nrows, ncols, T, Backend> res(lhs.shape());
   res = lhs;
   res *= other;
@@ -333,21 +333,21 @@ inline Matrix<nrows, ncols, T, Backend> operator*(
 
 template <size_t nrows, size_t ncols, typename T, typename Backend>
 inline SCALAR_TIMES_TENSOR<Matrix<nrows, ncols, T, Backend>> operator*(
-    const Matrix<nrows, ncols, T, Backend> &lhs, const T &other) {
+    const Matrix<nrows, ncols, T, Backend>& lhs, const T& other) {
   return SCALAR_TIMES_TENSOR{.sca = other, .vec = lhs};
 }
 
 template <size_t nrows, size_t ncols, typename T, typename Backend>
 inline SCALAR_TIMES_TENSOR<Matrix<nrows, ncols, T, Backend>> operator*(
-    const T &other, const Matrix<nrows, ncols, T, Backend> &lhs) {
+    const T& other, const Matrix<nrows, ncols, T, Backend>& lhs) {
   return SCALAR_TIMES_TENSOR<Matrix<nrows, ncols, T, Backend>>{.sca = other,
                                                                .vec = lhs};
 }
 
 template <size_t nrows, size_t ncols, typename T, typename Backend>
 inline Matrix<nrows, ncols, T, Backend> operator/(
-    const Matrix<nrows, ncols, T, Backend> &lhs,
-    const Matrix<nrows, ncols, T, Backend> &other) {
+    const Matrix<nrows, ncols, T, Backend>& lhs,
+    const Matrix<nrows, ncols, T, Backend>& other) {
   Matrix<nrows, ncols, T, Backend> res(lhs.shape());
   res = lhs;
   res /= other;
@@ -356,8 +356,19 @@ inline Matrix<nrows, ncols, T, Backend> operator/(
 
 template <size_t nrows, size_t ncols, typename T, typename Backend>
 inline SCALAR_TIMES_TENSOR<Matrix<nrows, ncols, T, Backend>> operator/(
-    const Matrix<nrows, ncols, T, Backend> &lhs, const T &other) {
+    const Matrix<nrows, ncols, T, Backend>& lhs, const T& other) {
   return SCALAR_TIMES_TENSOR{.sca = T(1.0) / other, .vec = lhs};
 }
+
+// define a c++20 concept for any vector type
+
+template <typename T>
+struct is_matrix : std::false_type {};
+
+template <size_t R, size_t C, typename T, typename Backend>
+struct is_matrix<Matrix<R, C, T, Backend>> : std::true_type {};
+
+template <typename T>
+concept MatrixType = is_matrix<std::remove_cvref_t<T>>::value;
 
 }  // namespace swnumeric

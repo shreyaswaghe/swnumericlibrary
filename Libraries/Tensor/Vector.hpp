@@ -4,6 +4,7 @@
 #include <array>
 #include <cstddef>
 #include <iostream>
+#include <type_traits>
 
 #include "CblasBackend.hpp"
 #include "Libraries/Random/RngStreams.hpp"
@@ -325,5 +326,16 @@ inline SCALAR_TIMES_TENSOR<Vector<ssize, T, Backend>> operator/(
     const Vector<ssize, T, Backend> &lhs, const T &other) {
   return SCALAR_TIMES_TENSOR{.sca = T(1.0) / other, .vec = lhs};
 }
+
+// define a c++20 concept for any vector type
+
+template <typename T>
+struct is_vector : std::false_type {};
+
+template <size_t N, typename T, typename Backend>
+struct is_vector<Vector<N, T, Backend>> : std::true_type {};
+
+template <typename T>
+concept VectorType = is_vector<std::remove_cvref_t<T>>::value;
 
 }  // namespace swnumeric
